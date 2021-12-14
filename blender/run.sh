@@ -1,0 +1,1 @@
+blender -b $1 -a -o //output_#.png -t 0 -F PNG
