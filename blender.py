@@ -73,7 +73,7 @@ def event_consumer(event):
 
 async def main(params, subnet_tag, driver=None, network=None):
     package = await vm.repo(
-        image_hash="9a3b5d67b0b27746283cb5f287c13eab1beaa12d92a9f536b747c7ae",
+        image_hash="b1cd32b619c5e1dc91a257f11dcec1a88f2d071f5941d17358328d77",
         min_mem_gib=0.5,
         min_storage_gib=2.0,
     )
@@ -83,29 +83,13 @@ async def main(params, subnet_tag, driver=None, network=None):
         scene_path = params['scene_file']
         scene_name = params['scene_name']
         task_id = os.getenv("TASKID")
-        ctx.send_file(scene_path, f"/golem/resource/{scene_name}")
+        ctx.send_file(scene_path, f"/golem/input/{scene_name}")
         async for task in tasks:
             frame = task.data
-            crops = [{"outfilebasename": "out", "borders_x": [
-                0.0, 1.0], "borders_y": [0.0, 1.0]}]
-            ctx.send_json(
-                "/golem/work/params.json",
-                {
-                    "scene_file": f"/golem/resource/{scene_name}",
-                    "resolution": (params['resolution1'], params['resolution2']),
-                    "use_compositing": params['use_compositing'],
-                    "crops": crops,
-                    "samples": params['samples'],
-                    "frames": [frame],
-                    "output_format": params['output_format'],
-                    "RESOURCES_DIR": params['RESOURCES_DIR'],
-                    "WORK_DIR": params['WORK_DIR'],
-                    "OUTPUT_DIR": params['OUTPUT_DIR'],
-                },
-            )
-            ctx.run("/golem/entrypoints/run-blender.sh")
+            ctx.run("/bin/bash", "-c",
+                    f"blender -b /golem/input/{scene_name} -o /golem/output/output# -t 0 -f {frame}")
             output_file = f"/requestor/output/output_{frame}.png"
-            ctx.download_file(f"/golem/output/out{frame:04d}.png", output_file)
+            ctx.download_file(f"/golem/output/output{frame}.png", output_file)
             try:
                 # Set timeout for executing the script on the provider. Usually, 30 seconds
                 # should be more than enough for computing a single frame, however a provider
@@ -131,7 +115,7 @@ async def main(params, subnet_tag, driver=None, network=None):
                 raise
 
     # Iterator over the frame indices that we want to render
-    frames: range = range(0, 6, 1)
+    frames: range = range(params['startframe'], params['endframe'])
     # Worst-case overhead, in minutes, for initialization (negotiation, file transfer etc.)
     # TODO: make this dynamic, e.g. depending on the size of files to transfer
     init_overhead = 3

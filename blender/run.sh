@@ -1,1 +1,1 @@
-blender -b $1 -a -o //output_#.png -t 0 -F PNG
+blender -b $1 -o /golem/output/output# -t 0 -f $2

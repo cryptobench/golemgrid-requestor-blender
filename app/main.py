@@ -40,6 +40,7 @@ async def receive_file(params: UploadFile = File(...)):
     with open('/requestor/data.config') as f:
         for line in f:
             command = line
+
     proc = subprocess.Popen(command, shell=True)
     proc.wait()
     return {"stored_at": file_location}
