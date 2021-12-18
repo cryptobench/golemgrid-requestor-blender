@@ -22,6 +22,7 @@ import os
 import requests
 import aiohttp
 import requests
+from yapapi.rest.activity import CommandExecutionError
 
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
@@ -60,14 +61,18 @@ def event_consumer(event):
             event.provider_id, event.provider_info.name]
     elif isinstance(event, events.TaskStarted):
         submit_status_subtask(
-            provider_name=agreements[event.agr_id][1], provider_id=agreements[event.agr_id][0], task_data=event.task_data, status="started")
+            provider_name=agreements[event.agr_id][1], provider_id=agreements[event.agr_id][0], task_data=event.task_data, status="Computing")
     elif isinstance(event, events.TaskFinished):
         submit_status_subtask(
-            provider_name=agreements[event.agr_id][1], provider_id=agreements[event.agr_id][0], task_data=int(event.task_id)-1, status="finished")
+            provider_name=agreements[event.agr_id][1], provider_id=agreements[event.agr_id][0], task_data=int(event.task_id)-1, status="Finished")
     elif isinstance(event, events.WorkerFinished):
-        print("WorkerFinished", event)
+        _exc_type, exc, _tb = event.exc_info
+        reason = str(exc) or repr(exc) or "unexpected error"
+        if isinstance(exc, CommandExecutionError):
+            submit_status_subtask(
+                provider_name=agreements[event.agr_id][1], provider_id=agreements[event.agr_id][0], task_data=event.job_id, status="Failed")
     elif isinstance(event, events.ComputationFinished):
-        submit_status(status="finished", total_time={
+        submit_status(status="Finished", total_time={
                       datetime.now() - start_time})
 
 
@@ -77,7 +82,7 @@ async def main(params, subnet_tag, driver=None, network=None):
         min_mem_gib=0.5,
         min_storage_gib=2.0,
     )
-    submit_status(status="started")
+    submit_status(status="Started")
 
     async def worker(ctx: WorkContext, tasks):
         scene_path = params['scene_file']
@@ -112,6 +117,8 @@ async def main(params, subnet_tag, driver=None, network=None):
                     f"Task {task} timed out on {ctx.provider_name}, time: {task.running_time}"
                     f"{TEXT_COLOR_DEFAULT}"
                 )
+                submit_status_subtask(
+                    provider_name=ctx.provider_name, provider_id=ctx.provider_id, task_data=frame, status="Failed")
                 raise
 
     # Iterator over the frame indices that we want to render
