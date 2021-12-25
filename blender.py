@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import asyncio
+from asyncio import CancelledError
 from datetime import datetime, timedelta
 import pathlib
 import sys
@@ -64,16 +65,25 @@ def event_consumer(event):
             provider_name=agreements[event.agr_id][1], provider_id=agreements[event.agr_id][0], task_data=event.task_data, status="Computing")
     elif isinstance(event, events.TaskFinished):
         submit_status_subtask(
-            provider_name=agreements[event.agr_id][1], provider_id=agreements[event.agr_id][0], task_data=int(event.task_id)-1, status="Finished")
+            provider_name=agreements[event.agr_id][1], provider_id=agreements[event.agr_id][0], task_data=int(event.task_id), status="Finished")
     elif isinstance(event, events.WorkerFinished):
-        _exc_type, exc, _tb = event.exc_info
+        exc = event.exc_info
         reason = str(exc) or repr(exc) or "unexpected error"
         if isinstance(exc, CommandExecutionError):
             submit_status_subtask(
                 provider_name=agreements[event.agr_id][1], provider_id=agreements[event.agr_id][0], task_data=event.job_id, status="Failed")
     elif isinstance(event, events.ComputationFinished):
-        submit_status(status="Finished", total_time={
-                      datetime.now() - start_time})
+        if not event.exc_info:
+            submit_status(status="Finished", total_time={
+                datetime.now() - start_time})
+        else:
+            _exc_type, exc, _tb = event.exc_info
+            if isinstance(exc, CancelledError):
+                submit_status(status="Cancelled", total_time={
+                    datetime.now() - start_time})
+            else:
+                submit_status(status="Failed", total_time={
+                    datetime.now() - start_time})
 
 
 async def main(params, subnet_tag, driver=None, network=None):
@@ -87,14 +97,18 @@ async def main(params, subnet_tag, driver=None, network=None):
     async def worker(ctx: WorkContext, tasks):
         scene_path = params['scene_file']
         scene_name = params['scene_name']
+        format = params['output_format']
+        out_extension = params['output_extension'].lower()
         task_id = os.getenv("TASKID")
         ctx.send_file(scene_path, f"/golem/input/{scene_name}")
         async for task in tasks:
             frame = task.data
             ctx.run("/bin/bash", "-c",
-                    f"blender -b /golem/input/{scene_name} -o /golem/output/output# -t 0 -f {frame}")
-            output_file = f"/requestor/output/output_{frame}.png"
-            ctx.download_file(f"/golem/output/output{frame}.png", output_file)
+                    f"blender -b /golem/input/{scene_name} -o /golem/output/output# -F {format} -t 0 -f {frame}")
+            # format includes .
+            output_file = f"/requestor/output/output_{frame}{out_extension}"
+            ctx.download_file(
+                f"/golem/output/output{frame}{out_extension}", output_file)
             try:
                 # Set timeout for executing the script on the provider. Usually, 30 seconds
                 # should be more than enough for computing a single frame, however a provider
@@ -168,6 +182,7 @@ async def main(params, subnet_tag, driver=None, network=None):
         print(
             f"{num_tasks} tasks computed, total time: {datetime.now() - start_time}"
         )
+
     task_id = os.getenv("TASKID")
     url = f"http://container-manager-api:8003/v1/container/ping/shutdown/{task_id}"
     requests.get(url)
