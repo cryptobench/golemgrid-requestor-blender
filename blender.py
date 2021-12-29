@@ -35,11 +35,15 @@ agreements = {}
 start_time = datetime.now()
 
 
-def submit_status_subtask(provider_name, provider_id, task_data, status):
+def submit_status_subtask(provider_name, provider_id, task_data, status, time=None):
     url = 'http://api:8002/v1/status/subtask/blender'
     task_id = os.getenv('TASKID')
-    post_data = {'id': task_id, 'status': status,
-                 'provider': provider_name, 'provider_id': provider_id, 'task_data': task_data, }
+    if time:
+        post_data = {'id': task_id, 'status': status, 'provider': provider_name,
+                     'provider_id': provider_id, 'task_data': task_data, 'time': time}
+    else:
+        post_data = {'id': task_id, 'status': status,
+                     'provider': provider_name, 'provider_id': provider_id, 'task_data': task_data, }
 
     requests.post(url, data=post_data)
 
@@ -61,11 +65,13 @@ def event_consumer(event):
         agreements[event.agr_id] = [
             event.provider_id, event.provider_info.name]
     elif isinstance(event, events.TaskStarted):
+        agreements[event.task_data] = datetime.now()
         submit_status_subtask(
             provider_name=agreements[event.agr_id][1], provider_id=agreements[event.agr_id][0], task_data=event.task_data, status="Computing")
     elif isinstance(event, events.TaskFinished):
+        time_spent = datetime.now() - agreements[int(event.task_id)]
         submit_status_subtask(
-            provider_name=agreements[event.agr_id][1], provider_id=agreements[event.agr_id][0], task_data=int(event.task_id), status="Finished")
+            provider_name=agreements[event.agr_id][1], provider_id=agreements[event.agr_id][0], task_data=int(event.task_id), status="Finished", time=time_spent)
     elif isinstance(event, events.WorkerFinished):
         exc = event.exc_info
         reason = str(exc) or repr(exc) or "unexpected error"
