@@ -92,7 +92,7 @@ def event_consumer(event):
                     datetime.now() - start_time})
 
 
-async def main(params, subnet_tag, driver=None, network=None):
+async def main(params, subnet_tag, payment_driver=None, payment_network=None):
     package = await vm.repo(
         image_hash="b1cd32b619c5e1dc91a257f11dcec1a88f2d071f5941d17358328d77",
         min_mem_gib=0.5,
@@ -101,19 +101,20 @@ async def main(params, subnet_tag, driver=None, network=None):
     submit_status(status="Started")
 
     async def worker(ctx: WorkContext, tasks):
+        script = ctx.new_script(timeout=timedelta(minutes=10))
         scene_path = params['scene_file']
         scene_name = params['scene_name']
         format = params['output_format']
         out_extension = params['output_extension'].lower()
         task_id = os.getenv("TASKID")
-        ctx.send_file(scene_path, f"/golem/input/{scene_name}")
+        script.upload_file(scene_path, f"/golem/input/{scene_name}")
         async for task in tasks:
             frame = task.data
-            ctx.run("/bin/bash", "-c",
-                    f"blender -b /golem/input/{scene_name} -o /golem/output/output# -F {format} -t 0 -f {frame}")
+            script.run("/bin/bash", "-c",
+                       f"blender -b /golem/input/{scene_name} -o /golem/output/output# -F {format} -t 0 -f {frame}")
             # format includes .
             output_file = f"/requestor/output/output_{frame}{out_extension}"
-            ctx.download_file(
+            script.download_file(
                 f"/golem/output/output{frame}{out_extension}", output_file)
             try:
                 # Set timeout for executing the script on the provider. Usually, 30 seconds
@@ -121,7 +122,7 @@ async def main(params, subnet_tag, driver=None, network=None):
                 # may require more time for the first task if it needs to download a VM image
                 # first. Once downloaded, the VM image will be cached and other tasks that use
                 # that image will be computed faster.
-                yield ctx.commit(timeout=timedelta(minutes=175))
+                yield script
                 # TODO: Check if job results are valid
                 # and reject by: task.reject_task(reason = 'invalid file')
                 task.accept_result(result=output_file)
@@ -140,6 +141,7 @@ async def main(params, subnet_tag, driver=None, network=None):
                 submit_status_subtask(
                     provider_name=ctx.provider_name, provider_id=ctx.provider_id, task_data=frame, status="Failed")
                 raise
+            script = ctx.new_script(timeout=timedelta(minutes=1))
 
     # Iterator over the frame indices that we want to render
     frames: range = range(params['startframe'], params['endframe'])
@@ -157,8 +159,8 @@ async def main(params, subnet_tag, driver=None, network=None):
     async with Golem(
         budget=10.0,
         subnet_tag=subnet_tag,
-        driver=driver,
-        network=network,
+        payment_driver=payment_driver,
+        payment_network=payment_network,
     ) as golem:
         await golem.add_event_consumer(event_consumer)
 
@@ -215,7 +217,7 @@ if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     task = loop.create_task(
         main(params, subnet_tag="devnet-beta",
-             driver="erc20", network="rinkeby")
+             payment_driver="erc20", payment_network="rinkeby")
     )
 
     try:
