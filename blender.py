@@ -60,7 +60,7 @@ def submit_status(status, total_time=None):
 
 
 def event_consumer(event):
-
+    print(event)
     if isinstance(event, events.AgreementCreated):
         agreements[event.agr_id] = [
             event.provider_id, event.provider_info.name]
@@ -78,18 +78,18 @@ def event_consumer(event):
         if isinstance(exc, CommandExecutionError):
             submit_status_subtask(
                 provider_name=agreements[event.agr_id][1], provider_id=agreements[event.agr_id][0], task_data=event.job_id, status="Failed")
-    elif isinstance(event, events.ComputationFinished):
-        if not event.exc_info:
-            submit_status(status="Finished", total_time={
-                datetime.now() - start_time})
-        else:
-            _exc_type, exc, _tb = event.exc_info
-            if isinstance(exc, CancelledError):
-                submit_status(status="Cancelled", total_time={
-                    datetime.now() - start_time})
-            else:
-                submit_status(status="Failed", total_time={
-                    datetime.now() - start_time})
+    # elif isinstance(event, events.ComputationFinished):
+    #     if not event.exc_info:
+    #         submit_status(status="Finished", total_time={
+    #             datetime.now() - start_time})
+    #     else:
+    #         _exc_type, exc, _tb = event.exc_info
+    #         if isinstance(exc, CancelledError):
+    #             submit_status(status="Cancelled", total_time={
+    #                 datetime.now() - start_time})
+    #         else:
+    #             submit_status(status="Failed", total_time={
+    #                 datetime.now() - start_time})
 
 
 async def main(params, subnet_tag, payment_driver=None, payment_network=None):
