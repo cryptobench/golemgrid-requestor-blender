@@ -28,5 +28,5 @@ key=$(/root/.local/bin/yagna app-key create requester)
 /root/.local/bin/yagna payment fund
 /root/.local/bin/yagna payment init --sender
 echo "Installing custom yapapi"
-pip3 install yapapi
+pip3 install git+https://github.com/golemfactory/yapapi.git
 echo "Finished installing yapapi"
