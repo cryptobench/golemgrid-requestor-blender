@@ -28,7 +28,7 @@ from yapapi.rest.activity import CommandExecutionError
 examples_dir = pathlib.Path(__file__).resolve().parent.parent
 sys.path.append(str(examples_dir))
 task_id = os.getenv('TASKID')
-url = 'http://api:8002/v1/status/subtask/blender'
+url = 'http://backend:8002/v1/status/subtask/blender'
 
 agreements = {}
 
@@ -36,7 +36,7 @@ start_time = datetime.now()
 
 
 def submit_status_subtask(provider_name, provider_id, task_data, status, time=None):
-    url = 'http://api:8002/v1/status/subtask/blender'
+    url = 'http://backend:8002/v1/status/subtask/blender'
     task_id = os.getenv('TASKID')
     if time:
         post_data = {'id': task_id, 'status': status, 'provider': provider_name,
@@ -49,7 +49,7 @@ def submit_status_subtask(provider_name, provider_id, task_data, status, time=No
 
 
 def submit_status(status, total_time=None):
-    url = 'http://api:8002/v1/status/task/blender'
+    url = 'http://backend:8002/v1/status/task/blender'
     task_id = os.getenv('TASKID')
     if total_time:
         post_data = {'id': task_id, 'status': status,
@@ -125,7 +125,7 @@ async def main(params, subnet_tag, driver=None, network=None):
                 # TODO: Check if job results are valid
                 # and reject by: task.reject_task(reason = 'invalid file')
                 task.accept_result(result=output_file)
-                url = 'http://api:8002/v1/blender/subtask/upload'
+                url = 'http://backend:8002/v1/blender/subtask/upload'
                 with open(output_file, 'rb') as f:
                     async with aiohttp.ClientSession() as session:
                         async with session.post(url, data={'file': f, 'id': os.getenv("TASKID")}) as response:
