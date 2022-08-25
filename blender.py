@@ -182,7 +182,7 @@ async def main(
             worker,
             [Task(data=frame) for frame in frames],
             payload=package,
-            max_workers=3,
+            max_workers=1000,
             timeout=timeout,
         )
         async for task in completed_tasks:
