@@ -173,6 +173,8 @@ async def main(
         payment_driver=payment_driver,
         payment_network=payment_network,
     ) as golem:
+        await golem.add_event_consumer(event_consumer)
+
         print_env_info(golem)
 
         num_tasks = 0
