@@ -80,6 +80,9 @@ def event_consumer(event):
                 provider_name=agreements[event.agr_id][1], provider_id=agreements[event.agr_id][0], task_data=event.job_id, status="Failed")
 
 
+Golem.add_event_consumer(event_consumer)
+
+
 async def main(
     subnet_tag, min_cpu_threads, payment_driver=None, payment_network=None, show_usage=False
 ):
@@ -173,7 +176,6 @@ async def main(
         payment_driver=payment_driver,
         payment_network=payment_network,
     ) as golem:
-        await golem.add_event_consumer(event_consumer)
 
         print_env_info(golem)
 
