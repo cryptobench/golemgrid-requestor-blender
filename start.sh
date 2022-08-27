@@ -18,15 +18,30 @@
             err "invalid cputype: $_cputype"
             ;;
     esac
-# Start yagna service in the background and log it
-mkdir -p /golem/work
-touch /golem/work/yagna.log
+
+
+get_funds_from_faucet () {
+  FUNDING_STATUS=$(/root/.local/bin/yagna payment fund)
+}
+
+
 echo "Starting Yagna"
 RUST_LOG=error MARKET_DB_CLEANUP_INTERVAL=10min /root/.local/bin/yagna service run > /dev/null 2>&1 &
-sleep 5
+sleep 1
+
+
 key=$(/root/.local/bin/yagna app-key create requester)
-/root/.local/bin/yagna payment fund
+echo "Key: $key"
+
+# Acquire funds
+get_funds_from_faucet
+if [[ $FUNDING_STATUS == *"deadline has elapsed"* ]]; then
+  echo "Error receiving funds from the faucet. We're retrying..."
+  while [[ $FUNDING_STATUS == *"deadline has elapsed"* ]]
+  do
+    get_funds_from_faucet
+  done
+fi
+
+# Init payments account
 /root/.local/bin/yagna payment init --sender
-echo "Installing custom yapapi"
-pip3 install git+https://github.com/golemfactory/yapapi.git
-echo "Finished installing yapapi"

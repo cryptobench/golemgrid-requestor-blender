@@ -36,6 +36,7 @@ start_time = datetime.now()
 
 
 def submit_status_subtask(provider_name, provider_id, task_data, status, time=None):
+    print("REACHED")
     url = 'http://backend:8002/v1/status/subtask/blender'
     task_id = os.getenv('TASKID')
     if time:
@@ -44,11 +45,12 @@ def submit_status_subtask(provider_name, provider_id, task_data, status, time=No
     else:
         post_data = {'id': task_id, 'status': status,
                      'provider': provider_name, 'provider_id': provider_id, 'task_data': task_data, }
-
+    print(post_data)
     requests.post(url, data=post_data)
 
 
 def submit_status(status, total_time=None):
+    print("REACHED2")
     url = 'http://backend:8002/v1/status/task/blender'
     task_id = os.getenv('TASKID')
     if total_time:
@@ -56,6 +58,7 @@ def submit_status(status, total_time=None):
                      'time_spent': total_time}
     else:
         post_data = {'id': task_id, 'status': status, }
+    print(post_data)
     requests.post(url, data=post_data)
 
 
@@ -78,13 +81,16 @@ def event_consumer(event):
         if isinstance(exc, CommandExecutionError):
             submit_status_subtask(
                 provider_name=agreements[event.agr_id][1], provider_id=agreements[event.agr_id][0], task_data=event.job_id, status="Failed")
-
-
-Golem.add_event_consumer(event_consumer)
+    elif isinstance(event, events.JobStarted):
+        submit_status(status="Started")
+    elif isinstance(event, events.JobFinished):
+        submit_status(status="Finished")
 
 
 async def main(
     subnet_tag, min_cpu_threads, payment_driver=None, payment_network=None, show_usage=False
+
+
 ):
     package = await vm.repo(
         image_hash="b1cd32b619c5e1dc91a257f11dcec1a88f2d071f5941d17358328d77",
@@ -175,6 +181,7 @@ async def main(
         subnet_tag=subnet_tag,
         payment_driver=payment_driver,
         payment_network=payment_network,
+        event_consumer=event_consumer,
     ) as golem:
 
         print_env_info(golem)

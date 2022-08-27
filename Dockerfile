@@ -25,7 +25,7 @@ RUN apt install -y build-essential \
 
 # Update pip
 RUN pip3 install fastapi uvicorn python-multipart requests aiohttp
-
+RUN pip3 install git+https://github.com/golemfactory/yapapi.git
 RUN mkdir -p $HOME/.local/share/ya-installer/terms
 RUN touch $HOME/.local/share/ya-installer/terms/testnet-01.tag
 ENV PATH=${PATH}:/root/.local/bin/:/root/.local/
