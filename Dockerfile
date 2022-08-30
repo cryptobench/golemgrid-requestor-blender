@@ -1,5 +1,5 @@
 # pull official python alpine image
-FROM python:3.8
+FROM ubuntu:latest
 ARG DEBIAN_FRONTEND=noninteractive
 
 COPY ./app /app
@@ -16,9 +16,11 @@ COPY start.sh /requestor/start.sh
 RUN apt update && apt install -y \
     curl \
     git \
+    python3 \
     python3-pip
 # Installing temporary packages required for installing requirements.pip 
 RUN apt install -y build-essential \
+    python3-dev \ 
     jq
 
 # Update pip
