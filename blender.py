@@ -103,9 +103,6 @@ async def main(
     )
 
     async def worker(ctx: WorkContext, tasks):
-        script_dir = pathlib.Path(__file__).resolve().parent
-        scene_path = str(script_dir / "cubes.blend")
-
         # Set timeout for the first script executed on the provider. Usually, 30 seconds
         # should be more than enough for computing a single frame of the provided scene,
         # however a provider may require more time for the first task if it needs to download
@@ -115,7 +112,10 @@ async def main(
         scene_name = params['scene_name']
         format = params['output_format']
         out_extension = params['output_extension'].lower()
-        task_id = os.getenv("TASKID")
+        print(scene_name)
+        print(out_extension)
+        print(format)
+        print(scene_path)
         script = ctx.new_script(timeout=timedelta(minutes=10))
         script.upload_file(scene_path, f"/golem/input/{scene_name}")
 
