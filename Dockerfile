@@ -1,5 +1,5 @@
 # pull official python alpine image
-FROM python-3.9:latest
+FROM python-3.9
 ARG DEBIAN_FRONTEND=noninteractive
 
 COPY ./app /app
