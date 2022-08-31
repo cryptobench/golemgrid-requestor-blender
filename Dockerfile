@@ -1,5 +1,5 @@
 # pull official python alpine image
-FROM ubuntu:latest
+FROM python:3.8-alpine
 ARG DEBIAN_FRONTEND=noninteractive
 
 COPY ./app /app
@@ -24,8 +24,8 @@ RUN apt install -y build-essential \
     jq
 
 # Update pip
-RUN pip3 install fastapi uvicorn python-multipart requests aiohttp
 RUN pip3 install git+https://github.com/golemfactory/yapapi.git
+RUN pip3 install fastapi uvicorn python-multipart requests aiohttp yapapi
 RUN mkdir -p $HOME/.local/share/ya-installer/terms
 RUN touch $HOME/.local/share/ya-installer/terms/testnet-01.tag
 ENV PATH=${PATH}:/root/.local/bin/:/root/.local/
